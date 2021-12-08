@@ -4,3 +4,6 @@ rqlite_log
 
 rqlite
 rqlited
+
+test.py
+test/
