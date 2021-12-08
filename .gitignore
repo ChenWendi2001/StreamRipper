@@ -1,0 +1,9 @@
+__pycache__
+rqlite_db
+rqlite_log
+
+rqlite
+rqlited
+
+test.py
+test/
