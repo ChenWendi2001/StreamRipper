@@ -33,7 +33,7 @@ class BackendServer:
             print(e)
             printError(True, "fail to get id")
 
-    def join(self):
+    def __enter__(self):
         # $ rqlited -disco-id <disco ID>
 
         if os.path.exists(self.file_dir):
@@ -48,7 +48,13 @@ class BackendServer:
              "-disco-id", self.disco_id, self.file_dir],
             stdout=self.log_file, stderr=self.log_file)
 
-    def stop(self):
+        try:
+            self.proc.wait(timeout=4)
+            printError(True, f"fail to join cluster {self.disco_id}")
+        except subprocess.TimeoutExpired:
+            printInfo(f"join cluster {self.disco_id}")
+
+    def __exit__(self, *_):
         # $ curl -XDELETE -L --post301 http://discovery.rqlite.com/<disco ID>
         #   -H "Content-Type: application/json" -d '{"addr": "<node address>"}'
         try:
@@ -58,19 +64,18 @@ class BackendServer:
                 " -H 'Content-Type: application/json'"
                 f" -d '{{\"addr\": \"{self.host_ip}:{self.http_port}\"}}' 2>/dev/null")
             result = json.loads(f.read())
-            printInfo("rest nodes {}".format(result["nodes"]))
+            printInfo(f"stop current node, rest nodes {result['nodes']}")
         except Exception as e:
             print(e)
             printWarn(True, "fail to stop")
             return False
         finally:
+            printInfo("quit.")
             self.proc.terminate()
             self.log_file.close()
 
 
 # sample
 id = BackendServer.getDiscoID()
-server = BackendServer(ic(id), getHostIP())
-server.join()
-time.sleep(2)
-server.stop()
+with BackendServer(ic(id), getHostIP()) as server:
+    time.sleep(2)
