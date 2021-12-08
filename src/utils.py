@@ -26,7 +26,3 @@ def getHostIP():
     ip = s.getsockname()[0]
     s.close()
     return ip
-
-
-if __name__ == "__main__":
-    print(getHostIP())
