@@ -1,6 +1,6 @@
-from local_DB import LocalDB
+from Middleware.local_DB import LocalDB
 
-db = LocalDB(4)
+db = LocalDB(None, 4)
 db.printDB()
 
 db.insert(4, 10)
@@ -12,5 +12,6 @@ db.printDB()
 db.insert("y", 10)
 db.printDB()
 
+db.update(1, 20)
 print(db.query("x"))
 db.printDB()
