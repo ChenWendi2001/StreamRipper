@@ -1,9 +1,9 @@
-from re import I
-from backend import BackendServer
-from icecream import ic
-from utils import getHostIP
 import random
 
+from icecream import ic
+
+from Backend.backend import BackendServer
+from utils import getHostIP
 
 disco_id = BackendServer.getDiscoID()
 ip = getHostIP()
