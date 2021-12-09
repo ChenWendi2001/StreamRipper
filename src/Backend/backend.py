@@ -115,7 +115,7 @@ class BackendServer:
         with self.connection.cursor() as cursor:
             cursor.execute(
                 "SELECT * FROM {} {}".format(
-                    table, "" if column is None else f"WHERE ID={column}")
+                    table, "" if column is None else f"WHERE ID = '{column}'")
             )
             result = cursor.fetchall()
         return result
@@ -134,7 +134,7 @@ class BackendServer:
     def remove(self, table, column):
         with self.connection.cursor() as cursor:
             cursor.execute(
-                f"DELETE FROM {table} WHERE ID = {column}")
+                f"DELETE FROM {table} WHERE ID = '{column}'")
 
     def modify(self, table, item):
         """[summary]
