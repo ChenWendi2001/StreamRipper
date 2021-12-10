@@ -1,22 +1,19 @@
-import mitmproxy.http
-from mitmproxy import ctx
-
+import asyncio
+import pickle
+import re
+import sys
+import threading
 from enum import Enum
 from queue import Queue
-import threading
+
+import mitmproxy.http
+from icecream import ic
 
 from Backend.backend import BackendServer
 from Middleware.local_DB import LocalDB
 from Middleware.P2P.client import download
 from Middleware.P2P.server import Server
-
-import asyncio
-import sys
-import re
-import pickle
-
-from icecream import ic
-from utils import printInfo, printWarn
+from utils import getHostIP, printError, printInfo, printWarn
 
 
 class Status(Enum):
@@ -24,11 +21,11 @@ class Status(Enum):
     Error = 2
 
 
-def main(disco_id, task_queue, done_queue):
+def main(task_queue, done_queue):
     # BUG: FIXME:
     printInfo("\033[31m start main \033[0m")
     disco_id = BackendServer.getDiscoID()
-    host_ip = "127.0.0.1"
+    host_ip = getHostIP()
 
     with BackendServer(disco_id, host_ip) as server:
         db = LocalDB(backend=server, max_size=10000)
@@ -52,31 +49,38 @@ def main(disco_id, task_queue, done_queue):
                 done_queue.put(result)
             else:
                 # insert
-                if db.query(item[0]) is None:
-                    printInfo(f"insert {item[0]}")
-                    db.insert(*item)
+                printError(db.query(item[0]), "duplicate item")
+                printInfo(f"insert {item[0]}")
+                db.insert(*item)
 
 
 class Router:
     def __init__(self):
-        printInfo("init Rounter")
-        self.task_queue, self.done_queue = Queue(), Queue()
-        self.t_main = threading.Thread(target=main,
-                                       args=(None, self.task_queue, self.done_queue), daemon=True)
+        printInfo("init Router")
+        self.task_queue = Queue()
+        self.done_queue = Queue()
+        self.t_main = threading.Thread(
+            target=main, daemon=True,
+            args=(self.task_queue, self.done_queue))
         self.t_main.start()
+        self.from_db = None
 
     def request(self, flow: mitmproxy.http.HTTPFlow):
         # only intercept GET requests
         request = flow.request
+        self.from_db = False
         if request.method == "GET":
             status, key = self.get_key_from_request(request)
             if status == Status.OK:
                 printInfo("status: OK")
-                self.task_queue.put((key,))
+
+                self.task_queue.put((key, ))
                 data = self.done_queue.get()
                 printInfo(f"get data {data[:10]}")
                 if data:
                     printInfo("\033[42m frontend hit \033[0m")
+
+                    self.from_db = True
                     response = pickle.loads(data)
                     response.headers["Server"] = "StreamRipper"
                     flow.response = response
@@ -90,7 +94,9 @@ class Router:
             status, key = self.get_key_from_request(request)
             if status == Status.OK:
                 response = flow.response
-                self.task_queue.put((key, pickle.dumps(response)))
+                if not self.from_db:
+                    self.task_queue.put(
+                        (key, pickle.dumps(response)))
         pass
 
     def http_connect(self, flow: mitmproxy.http.HTTPFlow):
@@ -111,10 +117,10 @@ class Router:
 
         # parse
         if referer != "no referer":
-            referer = referer[referer.find("BV"):]
             referer = re.search("(BV\w+)", referer).group()
 
-        if referer != "no referer" and range != "no range":
+        if referer != "no referer" \
+                and range != "no range":
             status = Status.OK
         else:
             status = Status.Error
