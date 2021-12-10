@@ -16,7 +16,7 @@ import re
 import pickle
 
 from icecream import ic
-from utils import printInfo, printWarn
+from utils import printInfo, printWarn, getHostIP
 
 
 class Status(Enum):
@@ -28,7 +28,7 @@ def main(disco_id, task_queue, done_queue):
     # BUG: FIXME:
     printInfo("\033[31m start main \033[0m")
     disco_id = BackendServer.getDiscoID()
-    host_ip = "127.0.0.1"
+    host_ip = getHostIP()
 
     with BackendServer(disco_id, host_ip) as server:
         db = LocalDB(backend=server, max_size=10000)
@@ -45,6 +45,7 @@ def main(disco_id, task_queue, done_queue):
                 # query
                 printInfo(f"query {item[0]}")
                 result = server.query("PACK", item[0])
+                # downloader
                 if result:
                     target_ip = result[0][-1]
                     result = asyncio.run(
@@ -58,6 +59,8 @@ def main(disco_id, task_queue, done_queue):
 
 
 class Router:
+    from_database = False
+
     def __init__(self):
         printInfo("init Rounter")
         self.task_queue, self.done_queue = Queue(), Queue()
@@ -67,6 +70,7 @@ class Router:
 
     def request(self, flow: mitmproxy.http.HTTPFlow):
         # only intercept GET requests
+        self.from_database = False
         request = flow.request
         if request.method == "GET":
             status, key = self.get_key_from_request(request)
@@ -80,6 +84,7 @@ class Router:
                     response = pickle.loads(data)
                     response.headers["Server"] = "StreamRipper"
                     flow.response = response
+                    self.from_database = True
             else:
                 printWarn(True, "status: Error")
 
@@ -90,7 +95,8 @@ class Router:
             status, key = self.get_key_from_request(request)
             if status == Status.OK:
                 response = flow.response
-                self.task_queue.put((key, pickle.dumps(response)))
+                if not self.from_database:
+                    self.task_queue.put((key, pickle.dumps(response)))
         pass
 
     def http_connect(self, flow: mitmproxy.http.HTTPFlow):
