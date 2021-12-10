@@ -1,21 +1,21 @@
 import socket
+import sys
 
 
 def printInfo(msg):
-    print("[INFO]: {}".format(msg))
+    print("[INFO]: {}".format(msg), file=sys.stdout)
 
 
 def printWarn(flag, msg):
     if not flag:
         return
-    print("[WARN]: {}".format(msg))
+    print("[WARN]: {}".format(msg), file=sys.stderr)
 
 
 def printError(flag, msg):
     if not flag:
         return
-    print("[ERROR]: {}".format(msg))
-    import sys
+    print("[ERROR]: {}".format(msg), file=sys.stderr)
     sys.exit(0)
 
 
