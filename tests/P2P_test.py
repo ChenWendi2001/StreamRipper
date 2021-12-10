@@ -14,7 +14,7 @@ host_ip = "127.0.0.1"
 
 with BackendServer(ic(disco_id), ic(host_ip)) as server:
     db = LocalDB(backend=server, max_size=10)
-    db.insert("Vi", "Powder " * 10)
+    db.insert("Vi", ("Powder " * 10).encode())
     db.printDB()
     server.printDB()
 
@@ -29,7 +29,7 @@ with BackendServer(ic(disco_id), ic(host_ip)) as server:
         asyncio.run(
             download("Vi", ic(target_ip)))
 
-    db.update("Vi", "Caitlyn " * 10)
+    db.update("Vi", ("Caitlyn " * 10).encode())
     db.printDB()
 
     result = server.query("PACK", "Vi")
