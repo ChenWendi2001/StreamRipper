@@ -14,6 +14,7 @@ import asyncio
 import sys
 import re
 import pickle
+import requests
 
 from icecream import ic
 from utils import printInfo, printWarn, getHostIP
@@ -23,12 +24,14 @@ class Status(Enum):
     OK = 1
     Error = 2
 
+def scheduler():
+    return "127.0.0.1"
 
 def main(disco_id, task_queue, done_queue):
     # BUG: FIXME:
     printInfo("\033[31m start main \033[0m")
     disco_id = BackendServer.getDiscoID()
-    host_ip = getHostIP()
+    host_ip = "127.0.0.1"
 
     with BackendServer(disco_id, host_ip) as server:
         db = LocalDB(backend=server, max_size=10000)
@@ -41,7 +44,7 @@ def main(disco_id, task_queue, done_queue):
         while True:
             item = task_queue.get()
 
-            if len(item) == 1:
+            if item[2] == "query":
                 # query
                 printInfo(f"query {item[0]}")
                 result = server.query("PACK", item[0])
@@ -50,12 +53,32 @@ def main(disco_id, task_queue, done_queue):
                     target_ip = result[0][-1]
                     result = asyncio.run(
                         download(item[0], target_ip))
+                else:
+                    # schedule -> get a best host to download
+                    best_host_ip = scheduler()
+
+                    # if the best host is current host return None
+                    if best_host_ip == host_ip:
+                        result = ""
+                    # else send download request(host+http request)
+                    # remember to set a mark in request headers to represent download request
+                    else:
+                        printInfo(f"use other host:{best_host_ip} to download")
+                        request = item[1]
+                        url = request.pretty_host
+                        headers = {k.decode():v.decode() for k,v in request.headers.fields}
+                        headers["scheduler"] = True
+                        requests.get(url, headers=headers, proxies=[best_host_ip+":8080"])
+                    # download data
+                        result = asyncio.run(
+                            download(item[0], best_host_ip))
+                    
                 done_queue.put(result)
-            else:
+            elif item[2] == "insert":
                 # insert
                 if db.query(item[0]) is None:
                     printInfo(f"insert {item[0]}")
-                    db.insert(*item)
+                    db.insert(*item[:-1])
 
 
 class Router:
@@ -72,11 +95,16 @@ class Router:
         # only intercept GET requests
         self.from_database = False
         request = flow.request
+        # filter
+        headers = request.headers
+        scheduler_flag = headers.get("scheduler", default=False)
+        if scheduler_flag:
+            return
         if request.method == "GET":
             status, key = self.get_key_from_request(request)
             if status == Status.OK:
                 printInfo("status: OK")
-                self.task_queue.put((key,))
+                self.task_queue.put((key,request, "query"))
                 data = self.done_queue.get()
                 printInfo(f"get data {data[:10]}")
                 if data:
@@ -96,7 +124,7 @@ class Router:
             if status == Status.OK:
                 response = flow.response
                 if not self.from_database:
-                    self.task_queue.put((key, pickle.dumps(response)))
+                    self.task_queue.put((key, pickle.dumps(response), "insert"))
         pass
 
     def http_connect(self, flow: mitmproxy.http.HTTPFlow):
@@ -111,9 +139,9 @@ class Router:
         filename = path[:path.find(".m4s")].split("/")[-1].split("-")[-1]
 
         # request header (contains referer and range)
-        header = request.headers
-        referer = header.get("referer", default="no referer")
-        range = header.get("range", default="no range").lstrip("bytes=")
+        headers = request.headers
+        referer = headers.get("referer", default="no referer")
+        range = headers.get("range", default="no range").lstrip("bytes=")
 
         # parse
         if referer != "no referer":
