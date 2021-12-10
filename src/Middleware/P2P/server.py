@@ -1,6 +1,7 @@
 import asyncio
 import threading
 
+from utils import printInfo
 
 class Server(threading.Thread):
     def __init__(self, local_db, host_ip, port=4003) -> None:
@@ -17,7 +18,9 @@ class Server(threading.Thread):
         print(f"Received {key} from {addr}")
 
         data = self.local_db.query(key)
-        writer.write(data.encode())
+        if not data is None:
+            printInfo("server hit")
+        writer.write(data)
         await writer.drain()
 
         print("Close the connection")

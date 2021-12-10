@@ -9,9 +9,9 @@ async def download(key, host_ip, port=4003):
     writer.write(key.encode())
 
     data = await reader.read(-1)
-    print(f"Received: {data.decode()}")
+    # print(f"Received: {data.decode()}")
 
     print("Close the connection")
     writer.close()
 
-    return data.decode()
+    return data
