@@ -1,17 +1,36 @@
 import mitmproxy.http
-from mitmproxy import ctx, http
+from mitmproxy import ctx
 
 from enum import Enum
+from queue import Queue
+import threading
 
-from mitmproxy.net.http import response
+
+import asyncio
+import sys
 
 class Status(Enum):
     OK = 1
     Error = 2
 
-database = {}
+
+def main(task_queue: Queue, down_queue: Queue):
+    while True:
+        value = task_queue.get()
+        print('Get %s from queue.' % value, file=sys.stdout)
+
 
 class Router:
+    def __init__(self):
+        print("123", file=sys.stdout)
+        self.task_queue, self.done_queue = Queue(), Queue()
+        self.t_main= threading.Thread(target=main, args=(self.task_queue,self.done_queue),daemon=True)
+        self.t_main.start()
+
+    def __del__(self):
+        # self.p_midware.terminate()
+        print("del", file=sys.stdout)
+
     def request(self, flow: mitmproxy.http.HTTPFlow):
         # only intercept GET requests
         request = flow.request
@@ -20,11 +39,10 @@ class Router:
             if status == Status.OK:
                 ctx.log.info("OK")
                 ctx.log.info(key)
-                if key in database:
-                    ctx.log.info("********** hit **********")
-                    response = database[key]
-                    response.headers["server"] = "chenwendiiiii"
-                    flow.response = database[key]
+                self.task_queue.put((key,))
+                data = self.done_queue.get()
+                if data != None:
+                    flow.response(data)
             else:
                 ctx.log.info("Error")
 
@@ -34,8 +52,8 @@ class Router:
         if request.method == "GET":
             status,key = self.get_key_from_request(request)
             if status == Status.OK:
-                if key not in database:
-                    database[key] = flow.response
+                response = flow.request
+                self.task_queue.put((key, response))
         pass
 
     def http_connect(self, flow: mitmproxy.http.HTTPFlow):  
