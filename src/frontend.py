@@ -92,12 +92,16 @@ def main(disco_id, task_queue, done_queue):
                         url, headers = request.pretty_url, request.headers.fields
                         headers = {k.decode():v.decode() for k,v in headers}
                         headers["scheduler"] = "True"
-                        response = requests.get(url, headers=headers, proxies={"https":best_host_ip+":8080"},verify=False)
+                        try:
+                            response = requests.get(url, headers=headers, proxies={"https":best_host_ip+":8080"},verify=False,timeout=3)
+
                     # download data
-                        result = http.Response.make(status_code = response.status_code, 
+                            result = http.Response.make(status_code = response.status_code, 
                                                     content = response.content, 
                                                     headers = dict(response.headers))
-                        result = pickle.dumps(result)
+                            result = pickle.dumps(result)
+                        except:
+                            request = ""
 
                 done_queue.put(result)
             elif item[2] == "insert":
