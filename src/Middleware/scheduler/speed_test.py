@@ -13,6 +13,8 @@ class SpeedTester(threading.Thread):
         self.speed_test = speedtest.Speedtest()
 
     def run(self):
+        self.backend.modify(
+                    "STATUS", (self.backend.host_ip, 10))
         while True:
             self.speed_test.get_best_server()
             self.speed_test.download(threads=0)

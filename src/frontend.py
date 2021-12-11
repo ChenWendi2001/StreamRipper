@@ -4,17 +4,22 @@ from mitmproxy import ctx, http
 from enum import Enum
 from queue import Queue
 import threading
+# from multiprocessing import Process
 
 from Backend.backend import BackendServer
 from Middleware.local_DB import LocalDB
 from Middleware.P2P.client import download
 from Middleware.P2P.server import Server
 
+from Middleware.scheduler.speed_test import SpeedTester
+from Middleware.scheduler.scheduler import Scheduler
+
 import asyncio
 import sys
 import re
 import pickle
 import requests
+import json
 
 from icecream import ic
 from utils import printInfo, printWarn, getHostIP
@@ -24,13 +29,21 @@ class Status(Enum):
     OK = 1
     Error = 2
 
-def scheduler():
-    return "127.0.0.1"
+# def scheduler():
+#     return "127.0.0.1"
 
 def main(disco_id, task_queue, done_queue):
     # BUG: FIXME:
+
+    # node type
+    with open("./config/config.json","r") as f:
+        config = json.load(f)
+
+    type = config["type"]
+    disco_id = config["disco_id"]
+
     printInfo("\033[31m start main \033[0m")
-    disco_id = BackendServer.getDiscoID()
+    if disco_id == "": disco_id = BackendServer.getDiscoID()
     host_ip = getHostIP()
 
     with BackendServer(disco_id, host_ip) as server:
@@ -40,6 +53,13 @@ def main(disco_id, task_queue, done_queue):
 
         p2p_server = Server(db, host_ip)
         p2p_server.start()
+
+        # speedtest
+        if type == "server":
+            tester = SpeedTester(server)
+            tester.start()
+        # scheduler
+        scheduler = Scheduler(server)
 
         while True:
             item = task_queue.get()
@@ -56,7 +76,7 @@ def main(disco_id, task_queue, done_queue):
                     printInfo("\033[42m frontend hit \033[0m")
                 else:
                     # schedule -> get a best host to download
-                    best_host_ip = scheduler()
+                    best_host_ip = scheduler.schedule()
 
                     # if the best host is current host return None
                     if best_host_ip == host_ip:
