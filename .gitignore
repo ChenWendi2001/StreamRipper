@@ -9,4 +9,4 @@ test.py
 test/
 
 .vscode
-config
+config.json

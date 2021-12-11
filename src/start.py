@@ -6,7 +6,7 @@ from utils import printError, printInfo
 
 def main():
     type = int(input(
-        "Please input your node type:",
+        "Please input your node type:" +
         "([1] server [2] client):"))
     printError(
         type != 1 and type != 2,
@@ -19,7 +19,7 @@ def main():
         type == "client" and disco_id == "",
         "A client should have a discover ID.")
 
-    with open("./config/config.json", "w") as f:
+    with open("config.json", "w") as f:
         json.dump({"type": type, "disco_id": disco_id}, f)
 
     mitm_proc = None

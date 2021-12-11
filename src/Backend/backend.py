@@ -50,7 +50,7 @@ class BackendServer:
             stdout=self.log_file, stderr=self.log_file)
 
         try:
-            self.proc.wait(timeout=10)
+            self.proc.wait(timeout=5)
             printError(True, f"fail to join cluster {self.disco_id}")
         except subprocess.TimeoutExpired:
             printInfo(f"join cluster {self.disco_id}")

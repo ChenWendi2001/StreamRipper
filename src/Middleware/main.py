@@ -22,7 +22,7 @@ def main_func(task_queue, done_queue):
     # BUG: FIXME:
 
     # node type
-    with open("./config/config.json", "r") as f:
+    with open("config.json", "r") as f:
         config = json.load(f)
 
     type = config["type"]
@@ -61,7 +61,7 @@ def main_func(task_queue, done_queue):
             if opt == "query":
                 # query
                 printInfo(f"query {key}")
-                result = server.query("PACK", item[-1])
+                result = server.query("PACK", key)
 
                 # downloader
                 if result:
