@@ -53,6 +53,7 @@ def main(disco_id, task_queue, done_queue):
                     target_ip = result[0][-1]
                     result = asyncio.run(
                         download(item[0], target_ip))
+                    printInfo("\033[42m frontend hit \033[0m")
                 else:
                     # schedule -> get a best host to download
                     best_host_ip = scheduler()
@@ -101,6 +102,7 @@ class Router:
         headers = request.headers
         scheduler_flag = headers.get("scheduler", default="False")
         if scheduler_flag == "True":
+            printInfo("\033[44m receive a delegation \033[0m")
             return
         if request.method == "GET":
             status, key = self.get_key_from_request(request)
@@ -110,7 +112,6 @@ class Router:
                 data = self.done_queue.get()
                 printInfo(f"get data {data[:10]}")
                 if data:
-                    printInfo("\033[42m frontend hit \033[0m")
                     response = pickle.loads(data)
                     response.headers["Server"] = "StreamRipper"
                     flow.response = response
