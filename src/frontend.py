@@ -76,7 +76,10 @@ def main(disco_id, task_queue, done_queue):
                     printInfo("\033[42m frontend hit \033[0m")
                 else:
                     # schedule -> get a best host to download
-                    best_host_ip = scheduler.schedule()
+                    if type != "server":
+                        best_host_ip = scheduler.schedule()
+                    else:
+                        best_host_ip = host_ip
 
                     # if the best host is current host return None
                     if best_host_ip == host_ip:
