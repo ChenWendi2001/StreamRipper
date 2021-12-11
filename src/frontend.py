@@ -66,10 +66,10 @@ def main(disco_id, task_queue, done_queue):
                     else:
                         printInfo(f"use other host:{best_host_ip} to download")
                         request = item[1]
-                        url, headers = request.url, request.headers.fields
+                        url, headers = request.pretty_url, request.headers.fields
                         headers = {k.decode():v.decode() for k,v in headers}
                         headers["scheduler"] = "True"
-                        response = requests.get(url, headers=headers, proxies={"http":"http://"+best_host_ip+":8080"})
+                        response = requests.get(url, headers=headers, proxies={"https":best_host_ip+":8080"},verify=False)
                     # download data
                         result = http.Response.make(status_code = response.status_code, 
                                                     content = response.content, 
