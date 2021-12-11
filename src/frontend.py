@@ -1,5 +1,5 @@
 import mitmproxy.http
-from mitmproxy import ctx
+from mitmproxy import ctx, http
 
 from enum import Enum
 from queue import Queue
@@ -31,7 +31,7 @@ def main(disco_id, task_queue, done_queue):
     # BUG: FIXME:
     printInfo("\033[31m start main \033[0m")
     disco_id = BackendServer.getDiscoID()
-    host_ip = "127.0.0.1"
+    host_ip = getHostIP()
 
     with BackendServer(disco_id, host_ip) as server:
         db = LocalDB(backend=server, max_size=10000)
@@ -66,13 +66,15 @@ def main(disco_id, task_queue, done_queue):
                         printInfo(f"use other host:{best_host_ip} to download")
                         request = item[1]
                         url, headers = request.url, request.headers.fields
-                        headers = {k.decode():v.decode() for k,v in headers.items()}
-                        headers["scheduler"] = True
-                        requests.get(url, headers=headers, proxies={"http":"http://"+best_host_ip+":8080"})
+                        headers = {k.decode():v.decode() for k,v in headers}
+                        headers["scheduler"] = "True"
+                        response = requests.get(url, headers=headers, proxies={"http":"http://"+best_host_ip+":8080"})
                     # download data
-                        result = asyncio.run(
-                            download(item[0], best_host_ip))
-                    
+                        result = http.Response.make(status_code = response.status_code, 
+                                                    content = response.content, 
+                                                    headers = dict(response.headers))
+                        result = pickle.dumps(result)
+
                 done_queue.put(result)
             elif item[2] == "insert":
                 # insert
@@ -97,8 +99,8 @@ class Router:
         request = flow.request
         # filter
         headers = request.headers
-        scheduler_flag = headers.get("scheduler", default=False)
-        if scheduler_flag:
+        scheduler_flag = headers.get("scheduler", default="False")
+        if scheduler_flag == "True":
             return
         if request.method == "GET":
             status, key = self.get_key_from_request(request)
