@@ -21,10 +21,12 @@ def main():
         mitm = subprocess.Popen(["mitmweb","-s","frontend.py"])
         mitm.wait()
     except KeyboardInterrupt:
-        printInfo("catch keyboard interrupt")   
+        printInfo("catch keyboard interrupt")  
+        printInfo(mitm.pid) 
     finally:
         # os.killpg(os.getpgid(mitm.pid), signal.SIGTERM)
         mitm.terminate()
+        mitm.kill()
         mitm.wait()
         pass
 
