@@ -65,10 +65,10 @@ def main(disco_id, task_queue, done_queue):
                     else:
                         printInfo(f"use other host:{best_host_ip} to download")
                         request = item[1]
-                        url = request.pretty_host
-                        headers = {k.decode():v.decode() for k,v in request.headers.fields}
+                        url, headers = request.url, request.headers.fields
+                        headers = {k.decode():v.decode() for k,v in headers.items()}
                         headers["scheduler"] = True
-                        requests.get(url, headers=headers, proxies=[best_host_ip+":8080"])
+                        requests.get(url, headers=headers, proxies={"http":"http://"+best_host_ip+":8080"})
                     # download data
                         result = asyncio.run(
                             download(item[0], best_host_ip))
