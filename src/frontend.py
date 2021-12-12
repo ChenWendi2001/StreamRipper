@@ -30,9 +30,7 @@ class Router:
 
     def request(self, flow: mitmproxy.http.HTTPFlow):
         # only intercept GET requests
-        self.from_database = False
         request = flow.request
-        self.from_db = False
 
         # check delegation
         scheduler_flag = request.headers.get(
@@ -60,7 +58,6 @@ class Router:
                 response = pickle.loads(data)
                 response.headers["Server"] = "StreamRipper"
                 flow.response = response
-                self.from_db = True
             else:
                 printInfo("\033[47m frontend miss \033[0m")
                 v_range, ori_range = data
@@ -71,12 +68,15 @@ class Router:
         request = flow.request
         if request.method == "GET":
             status, key = self.get_key_from_request(request)
-            if status == Status.OK \
-                    and not self.from_db:
+            if status == Status.OK:
+                ori_range = request.headers.get(
+                    "ori-range", default="none")
+                if ori_range == "none":
+                    return
                 self.task_queue.put(
                     ("insert", key, flow.response))
                 start, end = map(
-                    int, request.headers["ori-range"].split(","))
+                    int, ori_range.split(","))
                 flow.response = extractResponse(
                     flow.response, start, end)
 
