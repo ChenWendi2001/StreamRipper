@@ -7,3 +7,6 @@ rqlited
 
 test.py
 test/
+
+.vscode
+config.json
