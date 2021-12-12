@@ -58,62 +58,10 @@ def main_func(task_queue, done_queue):
             opt, key = item[:-1]
 
             if opt == "insert":
-                # insert
                 splitter.insert(key, item[-1])
 
             if opt == "query":
-                # query
                 splitter.query(key, item[-1])
-                continue
-
-                printInfo(f"query {key}")
-                result = server.query("PACK", key)
-
-                # downloader
-                if result:
-                    # NOTE: find host
-                    target_ip = result[0][-1]
-                    result = asyncio.run(
-                        download(key, target_ip))
-                    printInfo("\033[42m frontend hit \033[0m")
-                    done_queue.put(result)
-                    continue
-
-                # database miss
-                # if the best host is current host return None
-                if host_type == "server":
-                    done_queue.put("")
-                    continue
-
-                # schedule -> get a best host to download
-                best_host_ip = scheduler.schedule()
-
-                # send download request(host+http request)
-                # remember to set a mark in request headers to represent download request
-                printInfo(f"use other host:{best_host_ip} to download")
-
-                request = item[-1]
-                url, headers = request.pretty_url, request.headers.fields
-                headers = {k.decode(): v.decode() for k, v in headers}
-                headers["scheduler"] = "True"
-
-                try:
-                    response = requests.get(
-                        url, headers=headers,
-                        proxies={"https": best_host_ip+":8080"},
-                        verify=False, timeout=4)
-
-                    # download data
-                    result = http.Response.make(
-                        status_code=response.status_code,
-                        headers=dict(response.headers),
-                        content=response.content,)
-                    result = pickle.dumps(result)
-
-                except:
-                    request = ""
-
-                done_queue.put(result)
 
             printError(
                 opt != "insert" and opt != "query",
