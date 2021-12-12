@@ -5,22 +5,22 @@ from utils import printError, printInfo
 
 
 def main():
-    type = int(input(
+    host_type = int(input(
         "Please input your node type:" +
         "([1] server [2] client):"))
     printError(
-        type != 1 and type != 2,
+        host_type != 1 and host_type != 2,
         "Invalid node type.")
 
-    type = ["", "server", "client"][type]
+    host_type = ["", "server", "client"][host_type]
 
     disco_id = input("Please input disco ID (empty for the first node):")
     printError(
-        type == "client" and disco_id == "",
+        host_type == "client" and disco_id == "",
         "A client should have a discover ID.")
 
     with open("config.json", "w") as f:
-        json.dump({"type": type, "disco_id": disco_id}, f)
+        json.dump({"type": host_type, "disco_id": disco_id}, f)
 
     mitm_proc = None
     try:

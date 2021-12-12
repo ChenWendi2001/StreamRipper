@@ -90,7 +90,7 @@ class Router:
 
         status = Status(
             referer != "no referer" and range != "no range")
-            
+
         return status, "-".join([referer, filename, range])
 
 

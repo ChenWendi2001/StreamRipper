@@ -16,16 +16,16 @@ from Middleware.scheduler.speed_test import SpeedTester
 
 def main_func(task_queue, done_queue):
     """[summary]
+    key = {BV..}-{30..}-{RANGE} 
+    e.g. "BV1fS4y1X7on-30032-214012-463769"
     ("query", key, request)
     ("insert", key, pickle.dumps(flow.response))
     """
-    # BUG: FIXME:
-
     # node type
     with open("config.json", "r") as f:
         config = json.load(f)
 
-    type = config["type"]
+    host_type = config["type"]
     disco_id = config["disco_id"]
 
     printInfo("\033[31m start main \033[0m")
@@ -42,7 +42,7 @@ def main_func(task_queue, done_queue):
         p2p_server.start()
 
         # speed test
-        if type == "server":
+        if host_type == "server":
             tester = SpeedTester(server)
             tester.start()
         # scheduler
@@ -54,9 +54,9 @@ def main_func(task_queue, done_queue):
 
             if opt == "insert":
                 # insert
-                if db.query(key) is None:
-                    printInfo(f"insert {key}")
-                    db.insert(key, item[-1])
+                printError(db.query(key), "duplicate item")
+                printInfo(f"insert {key}")
+                db.insert(key, item[-1])
 
             if opt == "query":
                 # query
@@ -68,43 +68,44 @@ def main_func(task_queue, done_queue):
                     # NOTE: find host
                     target_ip = result[0][-1]
                     result = asyncio.run(
-                        download(item[0], target_ip))
+                        download(key, target_ip))
                     printInfo("\033[42m frontend hit \033[0m")
-                else:
-                    # schedule -> get a best host to download
-                    best_host_ip = host_ip
-                    if type != "server":
-                        best_host_ip = scheduler.schedule()
+                    done_queue.put(result)
+                    continue
 
-                    # if the best host is current host return None
-                    if best_host_ip == host_ip:
-                        done_queue.put(result)
-                        continue
+                # database miss
+                # if the best host is current host return None
+                if host_type == "server":
+                    done_queue.put("")
+                    continue
 
-                    # else send download request(host+http request)
-                    # remember to set a mark in request headers to represent download request
-                    printInfo(f"use other host:{best_host_ip} to download")
+                # schedule -> get a best host to download
+                best_host_ip = scheduler.schedule()
 
-                    request = item[-1]
-                    url, headers = request.pretty_url, request.headers.fields
-                    headers = {k.decode(): v.decode() for k, v in headers}
-                    headers["scheduler"] = "True"
+                # send download request(host+http request)
+                # remember to set a mark in request headers to represent download request
+                printInfo(f"use other host:{best_host_ip} to download")
 
-                    try:
-                        response = requests.get(
-                            url, headers=headers,
-                            proxies={"https": best_host_ip+":8080"},
-                            verify=False, timeout=4)
+                request = item[-1]
+                url, headers = request.pretty_url, request.headers.fields
+                headers = {k.decode(): v.decode() for k, v in headers}
+                headers["scheduler"] = "True"
 
-                        # download data
-                        result = http.Response.make(
-                            status_code=response.status_code,
-                            headers=dict(response.headers),
-                            content=response.content,)
-                        result = pickle.dumps(result)
+                try:
+                    response = requests.get(
+                        url, headers=headers,
+                        proxies={"https": best_host_ip+":8080"},
+                        verify=False, timeout=4)
 
-                    except:
-                        request = ""
+                    # download data
+                    result = http.Response.make(
+                        status_code=response.status_code,
+                        headers=dict(response.headers),
+                        content=response.content,)
+                    result = pickle.dumps(result)
+
+                except:
+                    request = ""
 
                 done_queue.put(result)
 
