@@ -3,7 +3,9 @@ Project Repo for CS339: Computer Networking.
 
 ## Main Features
 
-see `paper.pdf` for more information.
+This project provide an acceleration service for [Bilibili](bilibili.com). For more information, please see `paper.pdf`.
+
+![](./asset/structure.png)
 
 ## Getting Started
 
