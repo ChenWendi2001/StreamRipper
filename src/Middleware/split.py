@@ -25,7 +25,7 @@ class Splitter:
         self.scheduler = scheduler
         self.backend = backend
         self.local_db = local_db
-        self.block_size = 256 * 1024
+        self.block_size = 512 * 1024
 
     def __upper(self, k):
         # NOTE: k' % self.block_size == 0 & k' >= k
@@ -91,12 +91,14 @@ class Splitter:
         # NOTE: server all hit / client partial hit
         response = None
         for i, target_ip in enumerate(host_ip):
+            start, end = slices[i]
             if target_ip is None:
                 # peer delegate
                 best_host_ip = self.scheduler.schedule()
                 printInfo(f"use other host:{best_host_ip} to download")
                 result = peerDelegate(
-                    changeRequest(request, start, end, [0] * 2), host_ip)
+                    changeRequest(request, start, end, [0] * 2),
+                    best_host_ip)
                 # timeout
                 if not result:
                     # self download
@@ -105,7 +107,6 @@ class Splitter:
                     return
             else:
                 # peer download
-                start, end = slices[i]
                 key = file_name.format(f"{start}-{end}")
                 result = peerDownload(key, target_ip)
 

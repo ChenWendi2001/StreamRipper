@@ -28,6 +28,7 @@ def main_func(task_queue, done_queue):
 
     host_type = config["type"]
     disco_id = config["disco_id"]
+    printInfo(f"type: {host_type}")
 
     printInfo("\033[41m start main \033[0m")
     if disco_id == "":

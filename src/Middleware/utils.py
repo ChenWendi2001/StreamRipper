@@ -6,7 +6,7 @@ import re
 import requests
 from mitmproxy import http
 
-from utils import printError, printInfo
+from utils import printError, printInfo, printWarn
 
 from .P2P.client import download
 
@@ -39,7 +39,7 @@ def extractResponse(response, start, end):
         start - int(low):end + 1 - int(low)]
     printError(
         start < int(low) or end > int(high),
-        f"incorrect range {start}, {end}, {low}")
+        f"incorrect range {start}, {end}, {low}, {high}")
     printError(
         len(new_response.content) != end - start + 1,
         "incorrect content length")
@@ -89,7 +89,8 @@ def peerDelegate(request, target_ip):
             content=response.content,)
         result = pickle.dumps(result)
 
-    except:
+    except Exception as e:
+        printWarn(e)
         result = ""
 
     return result
