@@ -97,7 +97,7 @@ class Splitter:
                 best_host_ip = self.scheduler.schedule()
                 printInfo(f"use other host:{best_host_ip} to download")
                 result = peerDelegate(
-                    changeRequest(request, start, end, [0] * 2),
+                    changeRequest(request, start, end, [start, end]),
                     best_host_ip)
                 # timeout
                 if not result:
