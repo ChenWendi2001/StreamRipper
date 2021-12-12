@@ -7,6 +7,8 @@ This project provide an acceleration service for [Bilibili](https://www.bilibili
 
 ![](./asset/structure.png)
 
+![](./asset/demo.gif)
+
 ## Getting Started
 
 :warning: DO NOT modify file structure.
