@@ -17,6 +17,8 @@ class Status(Enum):
 
 
 class Router:
+    from_database = False
+
     def __init__(self):
         printInfo("init Router")
         self.task_queue = Queue()
@@ -28,6 +30,7 @@ class Router:
 
     def request(self, flow: mitmproxy.http.HTTPFlow):
         # only intercept GET requests
+        self.from_database = False
         request = flow.request
         self.from_db = False
 
