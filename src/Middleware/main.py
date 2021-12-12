@@ -7,11 +7,12 @@ from Backend.backend import BackendServer
 from mitmproxy import http
 from utils import getHostIP, printError, printInfo, printWarn
 
-from Middleware.local_DB import LocalDB
-from Middleware.P2P.client import download
-from Middleware.P2P.server import Server
-from Middleware.scheduler.scheduler import Scheduler
-from Middleware.scheduler.speed_test import SpeedTester
+from .local_DB import LocalDB
+from .P2P.client import download
+from .P2P.server import Server
+from .scheduler.scheduler import Scheduler
+from .scheduler.speed_test import SpeedTester
+from .split import Splitter
 
 
 def main_func(task_queue, done_queue):
@@ -28,7 +29,7 @@ def main_func(task_queue, done_queue):
     host_type = config["type"]
     disco_id = config["disco_id"]
 
-    printInfo("\033[31m start main \033[0m")
+    printInfo("\033[41m start main \033[0m")
     if disco_id == "":
         disco_id = BackendServer.getDiscoID()
     host_ip = getHostIP()
@@ -48,18 +49,22 @@ def main_func(task_queue, done_queue):
         # scheduler
         scheduler = Scheduler(server)
 
+        splitter = Splitter(
+            host_type, done_queue, scheduler, server, db)
+
         while True:
             item = task_queue.get()
             opt, key = item[:-1]
 
             if opt == "insert":
                 # insert
-                printError(db.query(key), "duplicate item")
-                printInfo(f"insert {key}")
-                db.insert(key, item[-1])
+                splitter.insert(key, item[-1])
 
             if opt == "query":
                 # query
+                splitter.query(key, item[-1])
+                continue
+
                 printInfo(f"query {key}")
                 result = server.query("PACK", key)
 

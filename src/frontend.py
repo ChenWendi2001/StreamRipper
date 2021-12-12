@@ -7,6 +7,7 @@ from queue import Queue
 import mitmproxy.http
 
 from Middleware.main import main_func
+from Middleware.utils import changeRequest, extractResponse
 from utils import printInfo, printWarn
 
 
@@ -51,11 +52,17 @@ class Router:
             printInfo(f"get data {data[:10]}")
 
             # NOTE: get data from db
-            if data:
+            if not isinstance(data, tuple):
+                printInfo("\033[42m frontend hit or partial hit \033[0m")
                 response = pickle.loads(data)
                 response.headers["Server"] = "StreamRipper"
                 flow.response = response
                 self.from_db = True
+            else:
+                printInfo("\033[47m frontend miss \033[0m")
+                v_range, ori_range = data
+                flow.request = changeRequest(
+                    flow.request, *v_range, ori_range)
 
     def response(self, flow: mitmproxy.http.HTTPFlow):
         request = flow.request
@@ -64,7 +71,11 @@ class Router:
             if status == Status.OK \
                     and not self.from_db:
                 self.task_queue.put(
-                    ("insert", key, pickle.dumps(flow.response)))
+                    ("insert", key, flow.response))
+                start, end = map(
+                    int, request.headers["ori-range"].split(","))
+                flow.response = extractResponse(
+                    flow.response, start, end)
 
     def http_connect(self, flow: mitmproxy.http.HTTPFlow):
         # for future use
