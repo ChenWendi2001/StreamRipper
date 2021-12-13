@@ -1,4 +1,6 @@
 # StreamRipper: An Adaptive Distributed Network Cache on LAN
+![](https://img.shields.io/badge/python-v3.8.8-blue) ![](https://img.shields.io/badge/mitmproxy-v7.0.4-green) ![](https://img.shields.io/badge/rqlite-v6.8.2-green)
+
 Project Repo for CS339: Computer Networking.
 
 ## Main Features
